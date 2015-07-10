@@ -265,7 +265,6 @@ module Kitchen
       end
 
       def parse_container_ssh_port(output)
-        return config[:host_ssh_port] if config[:host_ssh_port]
         begin
           host, port = output.split(':')
           port.to_i
@@ -276,6 +275,7 @@ module Kitchen
       end
 
       def container_ssh_port(state)
+        return config[:host_ssh_port] if config[:host_ssh_port]
         begin
           output = docker_command("port #{state[:container_id]} #{config[:container_ssh_port]}/tcp")
           parse_container_ssh_port(output)
