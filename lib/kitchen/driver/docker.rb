@@ -33,6 +33,7 @@ module Kitchen
       default_config :privileged,    false
       default_config :cap_add,       nil
       default_config :cap_drop,      nil
+      default_config :net,           nil
       default_config :security_opt,  nil
       default_config :use_cache,     true
       default_config :remove_images, false
@@ -46,6 +47,8 @@ module Kitchen
       default_config :tls_cert,      nil
       default_config :tls_key,       nil
       default_config :publish_all,   false
+      default_config :host_ssh_port, nil
+      default_config :container_ssh_port, 22
       default_config :wait_for_sshd, true
 
       default_config :use_sudo do |driver|
@@ -226,7 +229,7 @@ module Kitchen
       end
 
       def build_run_command(image_id)
-        cmd = "run -d -p 22"
+        cmd = "run -d -p #{config[:container_ssh_port]}"
         Array(config[:forward]).each {|port| cmd << " -p #{port}"}
         Array(config[:dns]).each {|dns| cmd << " --dns #{dns}"}
         Array(config[:add_host]).each {|host, ip| cmd << " --add-host=#{host}:#{ip}"}
@@ -236,6 +239,7 @@ module Kitchen
         cmd << " --name #{config[:instance_name]}" if config[:instance_name]
         cmd << " -P" if config[:publish_all]
         cmd << " -h #{config[:hostname]}" if config[:hostname]
+        cmd << " --net=#{config[:net]}" if config[:net]
         cmd << " -m #{config[:memory]}" if config[:memory]
         cmd << " -c #{config[:cpu]}" if config[:cpu]
         cmd << " -e http_proxy=#{config[:http_proxy]}" if config[:http_proxy]
@@ -244,7 +248,9 @@ module Kitchen
         Array(config[:cap_add]).each {|cap| cmd << " --cap-add=#{cap}"} if config[:cap_add]
         Array(config[:cap_drop]).each {|cap| cmd << " --cap-drop=#{cap}"} if config[:cap_drop]
         Array(config[:security_opt]).each {|opt| cmd << " --security-opt=#{opt}"} if config[:security_opt]
-        cmd << " #{image_id} #{config[:run_command]}"
+        run_command = config[:run_command]
+        run_command << "-p #{config[:container_ssh_port]}"
+        cmd << " #{image_id} #{run_command}"
         cmd
       end
 
@@ -259,6 +265,7 @@ module Kitchen
       end
 
       def parse_container_ssh_port(output)
+        return config[:host_ssh_port] if config[:host_ssh_port]
         begin
           host, port = output.split(':')
           port.to_i
@@ -270,7 +277,7 @@ module Kitchen
 
       def container_ssh_port(state)
         begin
-          output = docker_command("port #{state[:container_id]} 22/tcp")
+          output = docker_command("port #{state[:container_id]} #{config[:container_ssh_port]}/tcp")
           parse_container_ssh_port(output)
         rescue
           raise ActionFailed,
