@@ -249,7 +249,7 @@ module Kitchen
         Array(config[:cap_drop]).each {|cap| cmd << " --cap-drop=#{cap}"} if config[:cap_drop]
         Array(config[:security_opt]).each {|opt| cmd << " --security-opt=#{opt}"} if config[:security_opt]
         run_command = config[:run_command]
-        run_command << "-p #{config[:container_ssh_port]}"
+        run_command << " -p #{config[:container_ssh_port]}"
         cmd << " #{image_id} #{run_command}"
         cmd
       end
